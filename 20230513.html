@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>钉钉官网的滚动动画</title>
+	</head>
+	<body>
+		<div class="header">HEADER</div>
+		<div class="playground">
+			<div class="animation-container">
+				<div class="list">
+					<div data-order="0" class="list-item"></div>
+					<div data-order="1" class="list-item"></div>
+					<div data-order="2" class="list-item"></div>
+					<div data-order="3" class="list-item"></div>
+					<div data-order="2" class="list-item"></div>
+					<div data-order="1" class="list-item"></div>
+					<div data-order="0" class="list-item"></div>
+					<div data-order="0" class="list-item"></div>
+					<div data-order="1" class="list-item"></div>
+					<div data-order="2" class="list-item"></div>
+					<div data-order="3" class="list-item"></div>
+					<div data-order="2" class="list-item"></div>
+					<div data-order="1" class="list-item"></div>
+					<div data-order="0" class="list-item"></div>
+				</div>
+			</div>
+		</div>
+		<div class="footer">FOOTER</div>
+
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				overflow-x: hidden;
+			}
+
+			.header,
+			.footer {
+				height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				font-size: 4em;
+			}
+
+			.playground {
+				height: 4000px;
+				background: #000;
+			}
+
+			.animation-container {
+				position: sticky;
+				height: 100vh;
+				top: 0;
+			}
+
+			.list {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				width: 80%;
+				aspect-ratio: 2/1;
+				border-radius: 10px;
+				display: grid;
+				grid-template-columns: repeat(7, 1fr);
+				grid-template-rows: repeat(2, 1fr);
+				place-items: center;
+			}
+
+			.list-item {
+				width: 60%;
+				aspect-ratio: 1/1;
+				background: #fff;
+				border-radius: 10px;
+			}
+
+			.list-item:nth-child(3n + 1) {
+				background: linear-gradient(#3e90f7, #246bf6);
+			}
+
+			.list-item:nth-child(3n + 2) {
+				background: linear-gradient(#53b655, #469c50);
+			}
+
+			.list-item:nth-child(3n + 3) {
+				background: linear-gradient(#f3a93c, #f4ad3d);
+			}
+		</style>
+
+		<script>
+			function createAnimation(xStart, xEnd, yStart, yEnd) {
+				return function(x) {
+					if (x <= xStart) {
+						return yStart;
+					}
+					if (x >= xEnd) {
+						return yEnd;
+					}
+					return yStart + ((x - xStart) / (xEnd - xStart)) * (yEnd - yStart);
+				};
+			}
+
+			const animationMap = new Map();
+			const items = document.querySelectorAll('.list-item');
+			const playGround = document.querySelector('.playground');
+			const list = document.querySelector('.list');
+
+			function updateAnimationMap() {
+				animationMap.clear();
+				if (items.length === 0) {
+					return;
+				}
+				const playGroundRect = playGround.getBoundingClientRect();
+				const scrollY = window.scrollY;
+				const playGroundTop = playGroundRect.top + scrollY;
+				const playGroundBottom = playGroundRect.bottom + scrollY - window.innerHeight;
+
+				const listRect = list.getBoundingClientRect();
+				for (let i = 0; i < items.length; i++) {
+					const item = items[i];
+					const scrollStart = playGroundTop + item.dataset.order * 600;
+					const scrollEnd = playGroundBottom;
+					const itemWidth = item.clientWidth;
+					const itemHeight = item.clientHeight;
+					const itemLeft = item.offsetLeft;
+					const itemTop = item.offsetTop;
+					const opacityAnimation = createAnimation(scrollStart, scrollEnd, 0, 1);
+					const scaleAnimation = createAnimation(scrollStart, scrollEnd, 0.5, 1);
+					const translateXAnimation = createAnimation(
+						scrollStart,
+						scrollEnd,
+						listRect.width / 2 - itemLeft - itemWidth / 2,
+						0
+					);
+					const translateYAnimation = createAnimation(
+						scrollStart,
+						scrollEnd,
+						listRect.height / 2 - itemTop - itemHeight / 2,
+						0
+					);
+					const animations = {
+						opacity: function(scorllY) {
+							return opacityAnimation(scorllY);
+						},
+						transform: function(scorllY) {
+							const scaled = scaleAnimation(scorllY);
+							const x = translateXAnimation(scorllY);
+							const y = translateYAnimation(scorllY);
+							return `translate(${x}px, ${y}px) scale(${scaled})`;
+						},
+					};
+					animationMap.set(item, animations);
+				}
+			}
+			updateAnimationMap();
+
+			function updateStyles() {
+				const scrollY = window.scrollY;
+				for (const [item, animations] of animationMap) {
+					for (const prop in animations) {
+						item.style[prop] = animations[prop](scrollY);
+					}
+				}
+			}
+
+			updateStyles();
+
+			window.addEventListener('scroll', updateStyles);
+
+			window.addEventListener('resize', () => {
+				updateAnimationMap();
+				updateStyles();
+			});
+		</script>
+	</body>
+</html>
